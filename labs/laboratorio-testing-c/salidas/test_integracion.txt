@@ -1,0 +1,6 @@
+=== Tests de integracion ===
+[integracion: compra con 10% de descuento]
+  [OK]   total == 1300
+  [OK]   con_descuento == 1170
+
+--- 2/2 tests OK ---
