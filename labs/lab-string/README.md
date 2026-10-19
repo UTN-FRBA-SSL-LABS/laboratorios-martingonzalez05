@@ -277,7 +277,7 @@ Los tests de `IsEmpty` ya están activos en `StringTest.c`. Corré `make test` y
 
 **P1** — `IsEmpty` podría haberse escrito también como `return s[0] == '\0'`. ¿Son equivalentes? ¿Por qué?
 
-> R:
+> R:No son equivalentes,si se pasa s = NULL (dirección 0x0), tanto *s como s[0] intentan desreferenciar un puntero nulo, provocando un Segmentation Fault.
 
 ---
 
@@ -328,11 +328,11 @@ make test
 
 **P2** — ¿Qué hace `s + 1`? ¿Por qué avanza al siguiente carácter y no al siguiente byte?
 
-> R:
+> R:s + 1 realiza aritmética de punteros. Avanza la dirección de memoria hacia la siguiente posición del tipo referenciado (char). Como el tipo char en C ocupa exactamente 1 byte por definición (sizeof(char) == 1), avanzar un carácter y avanzar un byte coinciden físicamente, pero conceptualmente avanza un elemento del tipo char apuntado por
 
 **P3** — Si llamaras a `GetLength(NULL)`, ¿qué pasaría? ¿Por qué las precondiciones del contrato dicen `s != NULL`?
 
-> R:
+> R:Provocaría un fallo de segmentación (Segmentation Fault / Access Violation) y el programa se colgaría. Esto sucede porque GetLength(NULL) pasa el puntero nulo a IsEmpty(s), la cual intenta desreferenciarlo mediante *s (acceder a la dirección de memoria 0x0). Las precondiciones del contrato exigen s != NULL para deslindar a la función de realizar validaciones defensivas internas y garantizar que solo opere sobre punteros a cadenas válidas
 
 ```
 GETLENGTH_PASA=
@@ -367,7 +367,7 @@ El `while` termina cuando alguna de las dos cadenas llega a `'\0'`. Después dev
 
 **P4** — ¿Qué dos casos están mal cubiertos por `return 1`? Describí un ejemplo para cada uno.
 
-> R:
+> R:El caso 1 seria: s1 = "hola" y s2 = "hola mundo". El bucle while compara los primeros 4 caracteres ('h', 'o', 'l', 'a'), los cuales coinciden. Luego, s1 llega al terminador nulo '\0' (IsEmpty(s1) es verdadero), por lo que el while finaliza. Sin verificar que s2 todavía tiene más caracteres, la función ejecuta return 1;, indicando erróneamente que las cadenas son iguales cuando no lo son. El caso 2 seria: s1 = "algoritmos" y s2 = "algo". El bucle avanza comparando los primeros 4 caracteres. Al llegar al final de s2, IsEmpty(s2) se vuelve verdadero y corta el while. Como la función finaliza con return 1;, devuelve 1 (verdadero) a pesar de que s1 aún contiene caracteres restantes ("ritmos")
 
 #### Corrección
 
@@ -414,7 +414,7 @@ int AreDecimalDigits(const char *s) {
 
 **P5** — ¿Por qué la cadena vacía no debería considerarse un conjunto de dígitos decimales? Pensalo desde la especificación matemática.
 
-> R:
+> R:Para que una cadena represente un valor o secuencia numérica decimal, debe contener al menos un dígito decimal. La cadena vacía (longitud 0) no posee elementos, por lo que no satisface la condición de contener dígitos.
 
 #### Corrección
 
@@ -425,7 +425,7 @@ make test
 ```
 
 ```
-AREDECIMALDIGITS_PASA=
+AREDECIMALDIGITS_PASA=SI
 ```
 _(escribí SI cuando todos los tests de AreDecimalDigits pasen)_
 
@@ -467,7 +467,7 @@ Antes de implementar, discutí con tu equipo:
 
 **P6** — Conclusión de la discusión:
 
-> R:
+> R:Es correcto tener ToInt. eger en un módulo separado Conversion respetando el Principio de Responsabilidad Única (SRP) y la cohesión modular. Debe centrarse exclusivamente en la manipulación y consulta de cadenas de caracteres (longitud, comparación, búsqueda, validación de caracteres, etc.).La conversión entre distintas representaciones de datos (de texto a enteros, de enteros a texto, a flotantes, etc.) involucra lógica de parsing numérico, manejo de rangos y desbordamientos.
 
 ---
 
@@ -494,7 +494,7 @@ int ToInteger(const char *s) {
 
 **P7** — El loop acumula correctamente el valor en `resultado`. ¿Qué está mal en el `return`?
 
-> R:
+> R:La función está retornando solo la variable signo (que siempre vale 1 o -1). Para devolver el número entero completo convertido con el signo correspondiente, debe retornar el producto entre el signo y el valor acumulado: return signo * resultado;.
 
 #### Corrección
 
@@ -506,10 +506,10 @@ make test
 
 **P8** — La expresión `*s - '0'` convierte un carácter dígito al entero correspondiente. ¿Por qué funciona? ¿Qué devuelve `'3' - '0'`?
 
-> R:
+> R:Funciona porque en el estándar ASCII (y UTF-8), los caracteres numéricos del '0' al '9' están codificados de forma consecutiva y contigua. El carácter '0' tiene el valor entero 48, el '1' el 49, el '2' el 50, y así sucesivamente. Al restar la posición base ('0'), se calcula la distancia numérica exacta entre el carácter analizado y el cero. Devuelve el entero 3. Matemáticamente realiza la resta entre los valores decimales ASCII de ambos caracteres: 51 - 48 = 3.
 
 ```
-TOINTEGER_PASA=
+TOINTEGER_PASA=SI
 ```
 _(escribí SI cuando todos los tests de ToInteger pasen)_
 
@@ -562,7 +562,7 @@ foo
 
 **P9** — ¿Por qué `(void)argc` suprime un warning? ¿Cuándo sería necesario usar `argc`?
 
-> R:
+> R:El compilador genera una advertencia si se declara un parámetro en la firma de una función (como argc en main) y nunca se utiliza dentro de su cuerpo. Al escribir (void)argc;, se realiza un casteo explícito al tipo void sin asignar el resultado a ninguna variable. Esto le indica explícitamente al compilador que la variable fue leída/mencionada de forma intencional y que se conoce su falta de uso en el cuerpo del código, suprimiendo así la advertencia de "parámetro no utilizado". Seria necesaria usar argc en casos donde se deba validar la cantidad exacta o mínima de argumentos pasados por línea de comandos antes de procesarlos (por ejemplo, if (argc < 2) para verificar si el usuario ingresó al menos un argumento), o bien cuando se iteren los argumentos mediante un bucle de índice tradicional (por ejemplo, for (int i = 1; i < argc; i++)) en lugar de usar navegación por punteros con centinela NULL como *arg != NULL.
 
 ---
 
@@ -589,7 +589,7 @@ Salida esperada:
 ```
 
 ```
-LONGITUDES_PASA=
+LONGITUDES_PASA=SI
 ```
 _(SI o NO)_
 
@@ -616,7 +616,7 @@ make mayorlongitud
 ```
 
 ```
-MAYORLONGITUD_PASA=
+MAYORLONGITUD_PASA=SI
 ```
 _(SI o NO)_
 
@@ -635,7 +635,7 @@ make todosiguales
 ```
 
 ```
-TODOSIGUALES_PASA=
+TODOSIGUALES_PASA=SI
 ```
 _(SI o NO)_
 
@@ -654,7 +654,7 @@ make suma
 ```
 SUMA_PASA=
 ```
-_(SI o NO)_
+_(SI o NO)_SI
 
 ---
 
@@ -662,15 +662,15 @@ _(SI o NO)_
 
 **P10** — `GetLength` es recursiva pero en C una llamada recursiva consume un stack frame. Si llamaras `GetLength` con un string de 1.000.000 de caracteres, ¿qué pasaría? ¿Cómo lo resolverías?
 
-> R:
+> R:Lo que pasaria es que se produciría un Stack Overflow (desbordamiento de pila) y el programa terminaría abruptamente con un error (Segmentation Fault). Esto ocurre porque cada llamada recursiva apila un nuevo stack frame (que almacena la dirección de retorno y parámetros). Con 1.000.000 de llamadas, se excede el tamaño límite asignado por el sistema operativo para la pila de ejecución de la pila. Se podria resolver reemplanzo la recursividad por un bucle iterativo (como un while o for) que mantenga un acumulador en una sola variable local, utilizando $O(1)$ de espacio en la pila
 
 **P11** — En la Parte III, todos los programas usan `char **arg` para iterar en vez de un índice entero. ¿Qué ventaja tiene este estilo? ¿Cuándo sería preferible usar el índice?
 
-> R:
+> R: Las ventajas es que es mas efeciente y permite iterar la secuencia reconociendo directamente la terminacion marcada por el estandar argv. Es preferible usar el indice entero Cuando se requiere acceso aleatorio o no secuencial a los argumentos (ej. acceder directamente al argumento 3 sin recorrer los anteriores).   
 
 **P12** — En C, `"hola"` es un literal de tipo `const char *`. Si intentaras modificar un carácter con `s[0] = 'H'`, el comportamiento es indefinido. ¿Por qué? ¿En qué parte de la memoria viven los literales?
 
-> R:
+> R:Los literales de cadena son inmutables por especificación del lenguaje C. Intentar modificar un literal a través de s[0] = 'H' viola esta restricción, lo que en sistemas operativos modernos provoca una violación de segmento (Segmentation Fault) al intentar escribir en una página de memoria protegida como de solo lectura (read-only). Estos viven en la seccion de memoria de solo lectura(read only data).
 
 ---
 
